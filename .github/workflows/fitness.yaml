@@ -1,3 +1,10 @@
+# Copyright (c) 2026 Control Plane Limited. All rights reserved.
+# Built by ControlPlane for the FINOS OSERA Exchange.
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OSERA fitness checks on a patch repository at a release tag. Called by the ten line workflow every patch
+# repository carries (templates/osera-fitness.yaml) with one input, the tag. One composite action per requirement
+# of the standards pack, one signed result.
 name: fitness
 
 on:
@@ -24,7 +31,7 @@ jobs:
     # the tag the actions are checked out at, and the reference repository the library's own e2e checks.
     # At the move to finos-osera these lines change and nothing else.
     env:
-      GH_TOKEN: ${{ github.token }} # the checks read commits through the API; the job's own token, read only
+      GH_TOKEN: ${{ github.token }} # the checks read the fork parent and commit accounts through the API; the job's own token, read only
       LIBRARY: d1gital-f/osera-fitness-checks
       LIBRARY_REF: v1 # the moving major tag the callers pin; the result records the exact commit it resolved to
       REFERENCE: d1gital-f/patch-jackson-core
@@ -35,7 +42,11 @@ jobs:
       id-token: write # for creating OIDC tokens for signing.
       attestations: write # for GitHub Attestations.
     steps:
-      - name: Setting the workflow caller (a fork or the library itself for e2e testing)
+
+      # 1. What to check. A producer's run checks the producer's own repository with the actions at the released tag;
+      #    the library's own e2e checks a reference repository with the actions at the commit under test.
+      #    The environment every check action reads is set here, once.
+      - name: What to check
         id: target
         env:
           CALLER: ${{ github.repository }}
@@ -47,26 +58,26 @@ jobs:
           OWNER_ID: ${{ github.repository_owner_id }}
           IS_FORK: ${{ github.event.repository.fork }}
         run: |
-          # a producer's run checks the producer's repository with the actions at the released tag;
-          # the library's own e2e checks the reference with the actions at the commit under test
           if [ "$CALLER" = "$LIBRARY" ]; then TARGET="${REFERENCE_INPUT:-$REFERENCE}"; REF="$THIS_COMMIT"; else TARGET="$CALLER"; REF="$LIBRARY_REF"; fi
           echo "repository=$TARGET" >> "$GITHUB_OUTPUT"
           echo "name=${TARGET##*/}" >> "$GITHUB_OUTPUT"
           echo "library-ref=$REF" >> "$GITHUB_OUTPUT"
-          # the environment every check action reads, set once for the whole job
           {
             echo "OSERA_TAG=$OSERA_TAG"
             echo "OSERA_REPOSITORY=$TARGET"
             echo "OSERA_EXPECTED_ORG=${LIBRARY%%/*}"
             echo "OSERA_APPROVED_PRODUCERS=.osera-fitness/approved-producers/approved_producers.yaml"
             echo "OSERA_ACTOR=$ACTOR"
-            # what GitHub itself says about the repository the workflow runs in; empty when the library tests a reference, the checks then ask the API
-            if [ "$TARGET" = "$CALLER" ]; then echo "OSERA_OWNER=$OWNER"; echo "OSERA_OWNER_ID=$OWNER_ID"; echo "OSERA_IS_FORK=$IS_FORK"; fi
             echo "OSERA_RESULTS_DIR=$RUNNER_TEMP/osera-results"
             echo "OSERA_PACK=OSERA-SP-0.1.0"
+            # what GitHub itself says about the repository the workflow runs in; empty when the library tests a reference, the checks then ask the API
+            if [ "$TARGET" = "$CALLER" ]; then echo "OSERA_OWNER=$OWNER"; echo "OSERA_OWNER_ID=$OWNER_ID"; echo "OSERA_IS_FORK=$IS_FORK"; fi
           } >> "$GITHUB_ENV"
-          rm -rf "$RUNNER_TEMP/osera-results" && mkdir -p "$RUNNER_TEMP/osera-results" # the records live outside the checkout, nothing the producer commits can pre fill them
+          # the records live outside the checkout, nothing the producer commits can pre fill them
+          rm -rf "$RUNNER_TEMP/osera-results" && mkdir -p "$RUNNER_TEMP/osera-results"
           echo "checking $TARGET at $OSERA_TAG, library $LIBRARY at $REF"
+
+      # 2. The source: the patch repository at the tag, with every branch and tag the checks look at.
       - name: Checkout the patch repository at the tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -75,7 +86,7 @@ jobs:
           fetch-depth: 0
       - name: Fetch every branch and tag
         run: git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*' && git fetch --tags origin
-      - name: The tagged commit
+      - name: The tagged commit is HEAD
         id: commit
         env:
           OSERA_TAG: ${{ inputs.tag }}
@@ -83,6 +94,8 @@ jobs:
           SHA="$(git rev-parse "refs/tags/${OSERA_TAG}^{commit}")"
           [ "$(git rev-parse HEAD)" = "$SHA" ] || { echo "HEAD $(git rev-parse HEAD) is not the tag's commit $SHA"; exit 1; }
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      # 3. The library: the actions, the shared record library and the approved producers file, next to the source.
       - name: Checkout the osera-fitness-checks library
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -94,6 +107,8 @@ jobs:
         run: |
           echo "commit=$(git -C .osera-fitness rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "OSERA_LIBRARY=$LIBRARY@$(git -C .osera-fitness rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      # 4. The checks, one action per requirement, every one runs whatever the previous one said.
       - name: FORK-001.REQ-001
         uses: ./.osera-fitness/.github/actions/fork-001-req-001
         continue-on-error: true
@@ -127,19 +142,20 @@ jobs:
       - name: CP-REL-004-03 (proposal)
         uses: ./.osera-fitness/.github/actions/proposal-rel-004-accounts-in-entry
         continue-on-error: true
+
+      # 5. The result, signed twice with the workflow's identity: once on the file, for people (gh attestation verify),
+      #    once under the SHA256 of the tagged commit id, for the gate, which computes that digest from the tag alone.
       - name: Write the result
         id: result
         uses: ./.osera-fitness/.github/actions/write-result
-      - name: Attest the result
+      - name: Sign the result
         id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: ${{ steps.result.outputs.path }}
           predicate-type: https://osera.finos.org/fitness-result/v1
           predicate-path: ${{ steps.result.outputs.path }}
-      - name: Attest the result for the gate, under a digest the gate can compute from the tag alone
-        # subject = sha256 of the tagged commit id (40 hex characters, no newline); the predicate is the whole result.
-        # The gate knows the tag, gets the commit from GitHub, hashes it, and fetches this attestation by that digest.
+      - name: The gate's subject, sha256 of the tagged commit id
         id: subject
         env:
           COMMIT: ${{ steps.commit.outputs.sha }}
@@ -147,12 +163,15 @@ jobs:
         run: |
           echo "digest=$(printf '%s' "$COMMIT" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           echo "name=git:$REPOSITORY@$COMMIT" >> "$GITHUB_OUTPUT"
-      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+      - name: Sign the result again, under the gate's subject
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-name: ${{ steps.subject.outputs.name }}
           subject-digest: sha256:${{ steps.subject.outputs.digest }}
           predicate-type: https://osera.finos.org/fitness-result/v1
           predicate-path: ${{ steps.result.outputs.path }}
+
+      # 6. For people: the result and its Sigstore bundle as a workflow artifact.
       - name: Keep the bundle next to the result
         env:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
@@ -164,8 +183,10 @@ jobs:
           path: |
             ${{ runner.temp }}/osera-results/result.json
             ${{ runner.temp }}/osera-results/result.sigstore.json
+
+      # 7. The verdict: a producer's run is red when a blocking check failed or could not run.
+      #    When the library tests itself, the e2e compare job decides instead.
       - name: Blocking checks decide
-        # a producer's run is red when a blocking check failed or could not run; when the library tests itself the compare job decides instead
         if: ${{ github.repository != env.LIBRARY }}
         env:
           RESULT: ${{ steps.result.outputs.result }}

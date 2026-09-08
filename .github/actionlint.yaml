@@ -1,3 +1,5 @@
+# actionlint runs shellcheck on run blocks by default; the lint workflow runs shellcheck itself, on the library and on
+# every action's bash with the exclusions spelled out, so the built in pass is switched off here.
 paths:
   .github/workflows/**/*.{yml,yaml}:
     ignore:

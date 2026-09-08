@@ -1,3 +1,5 @@
+# Dependabot keeps the pinned third party actions current: the workflows at the root and every composite action.
+# A pull request a week, all actions in one, lint and e2e run on it, v1 moves only after a release.
 version: 2
 
 updates:

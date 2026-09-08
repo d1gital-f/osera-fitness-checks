@@ -1,3 +1,9 @@
+# Copyright (c) 2026 Control Plane Limited. All rights reserved.
+# Built by ControlPlane for the FINOS OSERA Exchange.
+# SPDX-License-Identifier: Apache-2.0
+#
+# The fitness workflow run against two frozen reference repositories at their release tags, the known good and the
+# known mistakes, and every status compared with the expected list under e2e/. Green before v1 moves.
 name: e2e
 
 on:
@@ -9,8 +15,7 @@ on:
 permissions: {} # nothing unless a job says so
 
 jobs:
-  # one run per reference repository, through the reusable workflow itself (the workflow honours the reference input
-  # only when its caller is the library): the known good and the known mistakes
+  # the fitness workflow honours the reference input only when its caller is this library
   good:
     uses: ./.github/workflows/fitness.yaml
     permissions:
@@ -34,7 +39,7 @@ jobs:
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: read # for checking out the expected lists.
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -47,6 +52,10 @@ jobs:
           failed=0
           for ref in patch-jackson-core patch-commons-codec; do
             jq -r '(.checks + .proposals)[] | "\(.requirement) \(.status)"' "osera-fitness-result-$ref/result.json" > "actual-$ref.txt"
-            if diff "e2e/expected-$ref.txt" "actual-$ref.txt"; then echo "e2e $ref: every status as expected"; else echo "e2e $ref: DIFFERS from the expected list"; failed=1; fi
+            if diff "e2e/expected-$ref.txt" "actual-$ref.txt"; then
+              echo "e2e $ref: every status as expected"
+            else
+              echo "e2e $ref: DIFFERS from the expected list"; failed=1
+            fi
           done
           exit "$failed"

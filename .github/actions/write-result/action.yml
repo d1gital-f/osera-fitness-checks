@@ -17,33 +17,30 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
+        LIB="$GITHUB_ACTION_PATH/../../../lib"
+
+        # 1. what this run was about
         COMMIT="$(git rev-parse "refs/tags/${OSERA_TAG}^{commit}")"
         PRODUCER="$(yq -r '.producer // ""' .osera/patch-evidence.yaml 2>/dev/null || true)"
+
+        # 2. exactly one record per expected requirement: a missing one is written as not-tested, an unexpected one stops the run
         EXPECTED="FORK-001.REQ-001 FORK-001.REQ-002 FORK-002.REQ-001 FORK-003.REQ-001 SRC-002.REQ-001 SRC-002.REQ-002 SRC-003.REQ-001 REL-001.REQ-001 CP-REL-004-01 CP-REL-004-02 CP-REL-004-03"
         cd "$OSERA_RESULTS_DIR"
-        # exactly one record per expected requirement: a missing one is not-tested, an unexpected one stops the run
         for R in $EXPECTED; do
-          [ -f "$R.json" ] || jq -n --arg r "$R" '{standard: (if ($r | startswith("CP-")) then "REL-004" else ($r | split(".")[0]) end), standard_version: "0.1.0",
-              requirement: $r, check: null, status: "not-tested", expected: "", observed: "the check did not run", evidence: []}' > "$R.json"
+          [ -f "$R.json" ] && continue
+          jq -n --arg r "$R" '{standard: (if ($r | startswith("CP-")) then "REL-004" else ($r | split(".")[0]) end), standard_version: "0.1.0",
+                                requirement: $r, check: null, status: "not-tested", expected: "", observed: "the check did not run", evidence: []}' > "$R.json"
         done
-        for F in *.json; do grep -qxF "${F%.json}" <<<"$(tr ' ' '\n' <<<"$EXPECTED")" || { echo "unexpected record $F"; exit 1; }; done
-        jq -s --arg pack "$OSERA_PACK" --arg repo "$OSERA_REPOSITORY" --arg release "$OSERA_TAG" --arg commit "$COMMIT" --arg producer "$PRODUCER" --arg library "$OSERA_LIBRARY" '
-          # the one rollup, per standard and at the top: any fail is a fail, then warn, then not-tested, then pass;
-          # not-applicable only when everything underneath is
-          def rollup: map(.status) as $s
-            | if any($s[]; . == "fail") then "fail"
-              elif any($s[]; . == "warn" or . == "manual-evidence-required") then "warn"
-              elif any($s[]; . == "not-tested") then "not-tested"
-              elif any($s[]; . == "pass") then "pass"
-              else "not-applicable" end;
-          (map(select(.requirement | startswith("CP-") | not))) as $checks
-          | (map(select(.requirement | startswith("CP-")))) as $proposals
-          | ($checks | group_by(.standard) | map({standard: .[0].standard, standard_version: "0.1.0", status: rollup})) as $standards
-          | {standard_pack: $pack, pack_checksum: null, repository: $repo, release: $release, commit: $commit, artifact_digest: null,
-             library: (if $library == "" then null else $library end), producer: (if $producer == "" then null else $producer end),
-             result: ($standards | rollup),
-             signature: "see the GitHub artifact attestation on this file",
-             standards: $standards, checks: $checks, proposals: $proposals}' ./*.json > result.json
+        for F in *.json; do
+          grep -qxF "${F%.json}" <<<"$(tr ' ' '\n' <<<"$EXPECTED")" || { echo "unexpected record $F"; exit 1; }
+        done
+
+        # 3. the result: the page's fields, one status per standard, one entry per requirement, the proposals
+        jq -s -f "$LIB/result.jq" \
+           --arg pack "$OSERA_PACK" --arg repo "$OSERA_REPOSITORY" --arg release "$OSERA_TAG" \
+           --arg commit "$COMMIT" --arg producer "$PRODUCER" --arg library "$OSERA_LIBRARY" \
+           ./*.json > result.json
+
         echo "result=$(jq -r .result result.json)" >> "$GITHUB_OUTPUT"
         echo "path=$OSERA_RESULTS_DIR/result.json" >> "$GITHUB_OUTPUT"
         jq . result.json
