@@ -17,7 +17,9 @@ runs:
 
         # 1. the evidence file must be in the repository at the tag
         step "reading $F"
-        [ -f "$F" ] || record fail "$F is not in the repository at $OSERA_TAG"
+        if [ ! -f "$F" ]; then
+          record fail "$F is not in the repository at $OSERA_TAG"
+        fi
 
         # 2. show the tests block as the producer wrote it
         ev yq '.tests // {}' "$F" >/dev/null
@@ -25,32 +27,44 @@ runs:
         # 3. the five fields must be filled
         MISSING=""
         for K in commit command runtime report result; do
-          [ -n "$(yq -r ".tests.$K // \"\"" "$F")" ] || MISSING="$MISSING $K"
+          if [ -z "$(yq -r ".tests.$K // \"\"" "$F")" ]; then
+            MISSING="$MISSING $K"
+          fi
         done
-        [ -z "$MISSING" ] || record fail "tests block missing:$MISSING"
+        if [ -n "$MISSING" ]; then
+          record fail "tests block missing:$MISSING"
+        fi
 
         # 4. tests.commit must be a commit of this repository
         TESTED="$(yq -r .tests.commit "$F")"
         step "resolving tests.commit $TESTED"
         TESTED_SHA="$(ev git rev-parse -q --verify "${TESTED}^{commit}" || true)"
-        [ -n "$TESTED_SHA" ] || record fail "tests.commit $TESTED is not a commit of this repository"
+        if [ -z "$TESTED_SHA" ]; then
+          record fail "tests.commit $TESTED is not a commit of this repository"
+        fi
 
-        # 5. the tested commit is the tagged commit, or an ancestor with only the evidence file and the caller workflow changed after it
-        #    (the producer tests, then commits those two files, then tags)
+        # 5. the tested commit is the tagged commit, or an ancestor with only the evidence file and the caller workflow
+        #    changed after it (the producer tests, then commits those two files, then tags)
         REL_SHA="$(ev git rev-parse "refs/tags/${OSERA_TAG}^{commit}")"
         if [ "$TESTED_SHA" = "$REL_SHA" ]; then
           WHERE="the tagged commit"
         else
-          ev git merge-base --is-ancestor "$TESTED_SHA" "$REL_SHA" >/dev/null || record fail "tests.commit $TESTED_SHA is not an ancestor of the tagged commit $REL_SHA"
+          if ! ev git merge-base --is-ancestor "$TESTED_SHA" "$REL_SHA" >/dev/null; then
+            record fail "tests.commit $TESTED_SHA is not an ancestor of the tagged commit $REL_SHA"
+          fi
           CHANGED="$(ev git diff --name-only "$TESTED_SHA" "$REL_SHA")"
           EXTRA="$(grep -vE "$PLUMBING" <<<"$CHANGED" || true)"
-          [ -z "$EXTRA" ] || record fail "files changed after the tested commit $TESTED_SHA beyond the OSERA plumbing: $(paste -sd, - <<<"$EXTRA")"
+          if [ -n "$EXTRA" ]; then
+            record fail "files changed after the tested commit $TESTED_SHA beyond the OSERA plumbing: $(paste -sd, - <<<"$EXTRA")"
+          fi
           N="$(ev git rev-list --count "$TESTED_SHA..$REL_SHA")"
           WHERE="$N commit(s) before the tag, only the OSERA plumbing files changed after it"
         fi
 
         # 6. the result must be pass
         RESULT="$(yq -r .tests.result "$F" | tr '[:upper:]' '[:lower:]')"
-        [ "$RESULT" = pass ] || record fail "tests.result is $RESULT, not pass"
+        if [ "$RESULT" != pass ]; then
+          record fail "tests.result is $RESULT, not pass"
+        fi
 
         record pass "tests ran on ${TESTED_SHA:0:12} ($WHERE): $(yq -r .tests.command "$F") on $(yq -r .tests.runtime "$F"), report $(yq -r .tests.report "$F"), result pass; the report contents are checked at the gate"

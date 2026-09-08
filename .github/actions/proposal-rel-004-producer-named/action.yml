@@ -16,8 +16,15 @@ runs:
 
         # 1. the evidence file must be in the repository at the tag (a proposal: warn, never fail)
         step "reading $F"
-        [ -f "$F" ] || { record warn "$F is not in the repository at $OSERA_TAG"; exit 0; }
+        if [ ! -f "$F" ]; then
+          record warn "$F is not in the repository at $OSERA_TAG"
+          exit 0
+        fi
 
         # 2. the producer line
         P="$(ev yq -r '.producer // ""' "$F")"
-        if [ -n "$P" ]; then record pass "producer: $P"; else record warn "no producer line in $F"; fi
+        if [ -n "$P" ]; then
+          record pass "producer: $P"
+        else
+          record warn "no producer line in $F"
+        fi

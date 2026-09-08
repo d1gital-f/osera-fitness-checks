@@ -23,6 +23,10 @@ runs:
         ALL="$(sed 's/^[ *]*//' <<<"$ALL" | paste -sd, -)"
 
         # 3. one matching branch is enough
-        if [ -n "$WITH_TAG" ]; then record pass "branch $WITH_TAG contains $OSERA_TAG"
-        elif [ -z "$ALL" ]; then record fail "no branch with patch in its name"
-        else record fail "branches present: $ALL; none is patch/$VERSION or patch/$LINE containing $OSERA_TAG"; fi
+        if [ -n "$WITH_TAG" ]; then
+          record pass "branch $WITH_TAG contains $OSERA_TAG"
+        elif [ -z "$ALL" ]; then
+          record fail "no branch with patch in its name"
+        else
+          record fail "branches present: $ALL; none is patch/$VERSION or patch/$LINE containing $OSERA_TAG"
+        fi

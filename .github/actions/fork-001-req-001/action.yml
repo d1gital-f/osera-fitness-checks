@@ -16,8 +16,10 @@ runs:
         # 1. who owns the repository: from the run context GitHub sets (the caller cannot write it),
         #    or from the API when the library tests a reference repository that is not the caller
         if [ -n "$OSERA_OWNER" ]; then
-          given github.repository_owner "$OSERA_OWNER"; given github.repository_owner_id "$OSERA_OWNER_ID"
-          OWNER="$OSERA_OWNER"; DETAIL="$OSERA_OWNER (id $OSERA_OWNER_ID), from the run context"
+          given github.repository_owner "$OSERA_OWNER"
+          given github.repository_owner_id "$OSERA_OWNER_ID"
+          OWNER="$OSERA_OWNER"
+          DETAIL="$OSERA_OWNER (id $OSERA_OWNER_ID), from the run context"
         else
           step "reading the repository owner from the GitHub API"
           DETAIL="$(ev gh api "repos/$OSERA_REPOSITORY" --jq '"\(.owner.login) (id \(.owner.id), \(.owner.type))"')"
@@ -25,5 +27,8 @@ runs:
         fi
 
         # 2. the owner must be the expected organisation
-        if [ "$OWNER" = "$OSERA_EXPECTED_ORG" ]; then record pass "owner is $DETAIL"
-        else record fail "owner is $DETAIL, not $OSERA_EXPECTED_ORG"; fi
+        if [ "$OWNER" = "$OSERA_EXPECTED_ORG" ]; then
+          record pass "owner is $DETAIL"
+        else
+          record fail "owner is $DETAIL, not $OSERA_EXPECTED_ORG"
+        fi

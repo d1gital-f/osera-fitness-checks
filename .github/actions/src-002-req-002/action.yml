@@ -21,13 +21,21 @@ runs:
         step "reading the commits between $BASE and $OSERA_TAG"
         TOTAL="$(ev git rev-list --count "${BASE}..${OSERA_TAG}")"
         CARRYING="$(ev git log --format=%H "${BASE}..${OSERA_TAG}" -i --extended-regexp --grep='(cherry picked from commit|backport of|upstream commit|upstream:) *[0-9a-f]{7,40}')"
-        if [ -z "$CARRYING" ]; then record not-applicable "$TOTAL commit(s) between $BASE and $OSERA_TAG, none names an upstream commit"; exit 0; fi
+        if [ -z "$CARRYING" ]; then
+          record not-applicable "$TOTAL commit(s) between $BASE and $OSERA_TAG, none names an upstream commit"
+          exit 0
+        fi
 
         # 3. each of those must carry a Co-authored-by trailer with a value (a SHOULD: warn, never fail)
         MISSING=""
         for C in $CARRYING; do
           MSG="$(ev git log -1 --format=%B "$C")"
-          grep -qE '^Co-authored-by: *[^ ]' <<<"$MSG" || MISSING="$MISSING ${C:0:12}"
+          if ! grep -qE '^Co-authored-by: *[^ ]' <<<"$MSG"; then
+            MISSING="$MISSING ${C:0:12}"
+          fi
         done
-        if [ -n "$MISSING" ]; then record warn "commit(s) naming an upstream commit without a Co-authored-by trailer:$MISSING"
-        else record pass "$(wc -l <<<"$CARRYING" | tr -d ' ') commit(s) name an upstream commit and carry a Co-authored-by trailer"; fi
+        if [ -n "$MISSING" ]; then
+          record warn "commit(s) naming an upstream commit without a Co-authored-by trailer:$MISSING"
+        else
+          record pass "$(wc -l <<<"$CARRYING" | tr -d ' ') commit(s) name an upstream commit and carry a Co-authored-by trailer"
+        fi

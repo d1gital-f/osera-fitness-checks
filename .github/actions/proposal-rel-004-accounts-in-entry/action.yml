@@ -16,10 +16,16 @@ runs:
 
         # 1. the evidence file, the producer, and the accounts its entry allows (a proposal: warn, never fail)
         step "reading $F and the approved producers file"
-        [ -f "$F" ] || { record warn "$F is not in the repository at $OSERA_TAG"; exit 0; }
+        if [ ! -f "$F" ]; then
+          record warn "$F is not in the repository at $OSERA_TAG"
+          exit 0
+        fi
         P="$(ev yq -r '.producer // ""' "$F")"
         ALLOWED="$(P="$P" ev yq -r '.producers[] | select(.id == env(P)) | .github_users[]' "$OSERA_APPROVED_PRODUCERS" | sort -u)"
-        [ -n "$ALLOWED" ] || { record warn "no approved producers entry with github_users for producer '$P', accounts cannot be checked"; exit 0; }
+        if [ -z "$ALLOWED" ]; then
+          record warn "no approved producers entry with github_users for producer '$P', accounts cannot be checked"
+          exit 0
+        fi
 
         # 2. without the baseline tag there is no range of commits: the check stops and is recorded not-tested
         step "resolving the baseline tag $BASE"
@@ -37,4 +43,8 @@ runs:
         # 4. every account must be in the entry
         BAD="$(comm -23 <(echo "$ACCOUNTS") <(echo "$ALLOWED") | paste -sd, -)"
         DETAIL="tag pushed by $OSERA_ACTOR; accounts on the $(wc -l <<<"$SHAS" | tr -d ' ') commit(s) since $BASE: $(paste -sd, - <<<"$ACCOUNTS"); allowed for '$P': $(paste -sd, - <<<"$ALLOWED")"
-        if [ -n "$BAD" ]; then record warn "account(s) not in the entry: $BAD. $DETAIL"; else record pass "$DETAIL"; fi
+        if [ -n "$BAD" ]; then
+          record warn "account(s) not in the entry: $BAD. $DETAIL"
+        else
+          record pass "$DETAIL"
+        fi

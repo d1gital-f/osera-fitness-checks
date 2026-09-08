@@ -16,14 +16,21 @@ runs:
 
         # 1. the evidence file must be in the repository at the tag
         step "reading $F"
-        [ -f "$F" ] || record fail "$F is not in the repository at $OSERA_TAG"
+        if [ ! -f "$F" ]; then
+          record fail "$F is not in the repository at $OSERA_TAG"
+        fi
 
         # 2. one line per fix: the CVE and the upstream link, placeholders when missing
         FIXES="$(ev yq -r '.fixes // [] | .[] | (.cve // "no-cve") + " " + (.upstream // "no-upstream")' "$F")"
-        [ -n "$FIXES" ] || record fail "$F has no fixes list"
+        if [ -z "$FIXES" ]; then
+          record fail "$F has no fixes list"
+        fi
 
         # 3. every fix needs a CVE and an https link
         BAD="$(awk '$1 == "no-cve" || $2 !~ /^https:\/\// {print}' <<<"$FIXES")"
         N="$(wc -l <<<"$FIXES" | tr -d ' ')"
-        if [ -z "$BAD" ]; then record pass "$N fix(es), each with a CVE and an https link to the upstream fix: $(paste -sd';' - <<<"$FIXES")"
-        else record fail "fix(es) without a CVE or without an https link: $(paste -sd';' - <<<"$BAD")"; fi
+        if [ -z "$BAD" ]; then
+          record pass "$N fix(es), each with a CVE and an https link to the upstream fix: $(paste -sd';' - <<<"$FIXES")"
+        else
+          record fail "fix(es) without a CVE or without an https link: $(paste -sd';' - <<<"$BAD")"
+        fi
