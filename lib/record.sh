@@ -32,7 +32,7 @@ EXPECTED=""; STEP=""
 check_is() { CHECK_STD="$1"; CHECK_REQ="$2"; CHECK_ID="$3"; EVFILE="$OSERA_RESULTS_DIR/.$CHECK_REQ.evidence"; : > "$EVFILE"; }
 expect() { EXPECTED="$1"; }
 step() { STEP="$1"; }
-quoted() { local a q="" s; for a in "$@"; do case "$a" in *[!A-Za-z0-9_./:@=+^{}-]*|"") s="$(printf '%s' "$a" | sed "s/'/'\\''/g")"; q="$q '$s'" ;; *) q="$q $a" ;; esac; done; printf '%s' "${q# }"; }
+quoted() { local a q="" s; for a in "$@"; do case "$a" in *[!A-Za-z0-9_./:@=+^{}-]*|"") s="$(printf '%s' "$a" | sed "s/'/'\\\\''/g")"; q="$q '$s'" ;; *) q="$q $a" ;; esac; done; printf '%s' "${q# }"; }
 ev() {
   local out rc=0
   out="$("$@" 2>&1)" || rc=$?
