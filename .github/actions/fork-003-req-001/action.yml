@@ -15,8 +15,8 @@ runs:
 
         # 1. the baseline tag must exist
         step "listing the baseline tags"
-        TAGS="$(ev git tag --list "$BASE" '*+patch.baseline')"
-        grep -qxF "$BASE" <<<"$TAGS" || record fail "no tag $BASE (baseline tags present: $(paste -sd, - <<<"${TAGS:-none}"))"
+        TAGS="$(ev git tag --list "$BASE" '*baseline*')"
+        grep -qxF "$BASE" <<<"$TAGS" || record fail "no tag $BASE (tags with baseline in the name: $(paste -sd, - <<<"${TAGS:-none}"))"
 
         # 2. the two commits: baseline and release
         BASE_SHA="$(ev git rev-parse "refs/tags/${BASE}^{commit}")"

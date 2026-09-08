@@ -18,11 +18,11 @@ runs:
         WITH_TAG="$(ev git branch -r --list "origin/patch/$VERSION" "origin/patch/$LINE" --contains "refs/tags/$OSERA_TAG")"
         WITH_TAG="$(sed 's/^[ *]*//' <<<"$WITH_TAG" | paste -sd, -)"
 
-        # 2. every patch branch, for the message when none matches
-        ALL="$(ev git branch -r --list 'origin/patch/*')"
+        # 2. every branch with patch in its name, for the message when none matches
+        ALL="$(ev git branch -r --list 'origin/*patch*')"
         ALL="$(sed 's/^[ *]*//' <<<"$ALL" | paste -sd, -)"
 
         # 3. one matching branch is enough
         if [ -n "$WITH_TAG" ]; then record pass "branch $WITH_TAG contains $OSERA_TAG"
-        elif [ -z "$ALL" ]; then record fail "no patch/ branch in the repository"
-        else record fail "patch branches present ($ALL), none is patch/$VERSION or patch/$LINE containing $OSERA_TAG"; fi
+        elif [ -z "$ALL" ]; then record fail "no branch with patch in its name"
+        else record fail "branches present: $ALL; none is patch/$VERSION or patch/$LINE containing $OSERA_TAG"; fi
