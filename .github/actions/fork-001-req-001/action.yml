@@ -12,7 +12,13 @@ runs:
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
         check_is FORK-001 FORK-001.REQ-001 FORK-001.CHECK-001
         expect "repository $OSERA_REPOSITORY is owned by the organisation $OSERA_EXPECTED_ORG"
-        step "reading the repository owner from the GitHub API"
-        OWNER="$(ev gh api "repos/$OSERA_REPOSITORY" --jq '"\(.owner.login) (id \(.owner.id), \(.owner.type))"')"
-        if [ "${OWNER%% *}" = "$OSERA_EXPECTED_ORG" ]; then record pass "owner is $OWNER"
-        else record fail "owner is $OWNER, not $OSERA_EXPECTED_ORG"; fi
+        if [ -n "$OSERA_OWNER" ]; then
+          # the run context is set by GitHub for the repository the workflow runs in, the caller cannot write it
+          given github.repository_owner "$OSERA_OWNER"; given github.repository_owner_id "$OSERA_OWNER_ID"
+          OWNER="$OSERA_OWNER"; DETAIL="$OSERA_OWNER (id $OSERA_OWNER_ID), from the run context"
+        else
+          step "reading the repository owner from the GitHub API"
+          DETAIL="$(ev gh api "repos/$OSERA_REPOSITORY" --jq '"\(.owner.login) (id \(.owner.id), \(.owner.type))"')"; OWNER="${DETAIL%% *}"
+        fi
+        if [ "$OWNER" = "$OSERA_EXPECTED_ORG" ]; then record pass "owner is $DETAIL"
+        else record fail "owner is $DETAIL, not $OSERA_EXPECTED_ORG"; fi

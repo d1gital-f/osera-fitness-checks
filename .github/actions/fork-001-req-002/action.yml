@@ -13,12 +13,13 @@ runs:
         check_is FORK-001 FORK-001.REQ-002 FORK-001.CHECK-002
         NAME="${OSERA_REPOSITORY##*/}"
         expect "repository name is patch-<name>: the patch- prefix, then the upstream repository or artifact being patched"
-        step "reading the fork parent from the GitHub API"
-        PARENT="$(ev gh api "repos/$OSERA_REPOSITORY" --jq '"fork \(.fork), parent \(.parent.full_name // "none")"')"
-        UP="${PARENT##*/}"
         case "$NAME" in
           patch-?*) ;;
           *) record fail "repository name $NAME has no patch- prefix" ;;
         esac
-        if [ "$NAME" = "patch-$UP" ]; then record pass "name $NAME, the suffix is the upstream repository name ($PARENT)"
-        else record pass "name $NAME has the patch- prefix; the suffix is not the upstream repository name ($PARENT), so it must be the artifact name, which the gate checks against the artifact"; fi
+        [ -z "$OSERA_IS_FORK" ] || given github.event.repository.fork "$OSERA_IS_FORK"
+        if [ "$OSERA_IS_FORK" = "false" ]; then record pass "name $NAME has the patch- prefix; the repository is not a GitHub fork, so the suffix must be the artifact name, which the gate checks against the artifact"; fi
+        step "reading the fork parent from the GitHub API"
+        PARENT="$(ev gh api "repos/$OSERA_REPOSITORY" --jq '.parent.full_name // "none"')"
+        if [ "$NAME" = "patch-${PARENT##*/}" ]; then record pass "name $NAME, the suffix is the upstream repository name (forked from $PARENT)"
+        else record pass "name $NAME has the patch- prefix; the suffix is not the upstream repository name (forked from $PARENT), so it must be the artifact name, which the gate checks against the artifact"; fi

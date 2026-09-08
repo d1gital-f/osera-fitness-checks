@@ -43,6 +43,9 @@ jobs:
           THIS_COMMIT: ${{ github.sha }}
           REFERENCE_INPUT: ${{ inputs.reference }}
           ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+          OWNER_ID: ${{ github.repository_owner_id }}
+          IS_FORK: ${{ github.event.repository.fork }}
         run: |
           # a producer's run checks the producer's repository with the actions at the released tag;
           # the library's own e2e checks the reference with the actions at the commit under test
@@ -57,6 +60,8 @@ jobs:
             echo "OSERA_EXPECTED_ORG=${LIBRARY%%/*}"
             echo "OSERA_APPROVED_PRODUCERS=.osera-fitness/approved-producers/approved_producers.yaml"
             echo "OSERA_ACTOR=$ACTOR"
+            # what GitHub itself says about the repository the workflow runs in; empty when the library tests a reference, the checks then ask the API
+            if [ "$TARGET" = "$CALLER" ]; then echo "OSERA_OWNER=$OWNER"; echo "OSERA_OWNER_ID=$OWNER_ID"; echo "OSERA_IS_FORK=$IS_FORK"; fi
             echo "OSERA_RESULTS_DIR=$RUNNER_TEMP/osera-results"
             echo "OSERA_PACK=OSERA-SP-0.1.0"
           } >> "$GITHUB_ENV"
