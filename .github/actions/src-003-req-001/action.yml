@@ -12,8 +12,11 @@ runs:
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
         check_is SRC-003 SRC-003.REQ-001 SRC-003.CHECK-001
         expect "every Java source or test file added between $BASE and $OSERA_TAG carries the licence header of the nearest existing file of the same kind in the same module (years, whitespace and asterisks ignored)"
+
+        # 1. without the baseline tag there is no list of new files: the check stops and is recorded not-tested
         step "resolving the baseline tag $BASE"
         ev git rev-parse -q --verify "refs/tags/${BASE}^{commit}" >/dev/null
+
         # the leading block comment of a file at a revision, years replaced by YEAR, whitespace and asterisks removed;
         # empty when the file does not start with one. awk reads the whole stream, so git never gets a broken pipe
         header() { git show "$1:$2" | awk 'BEGIN{c=0; d=0} d==1 {next} c==0 && /^[[:space:]]*$/ {next} c==0 && $0 !~ /^[[:space:]]*\/\*/ {d=1; next} {c=1; print} /\*\// {d=1}' | sed -E 's/(19|20)[0-9]{2}([[:space:]]*[-,][[:space:]]*(19|20)[0-9]{2})*/YEAR/g' | tr -d " \t\r\n*"; }
@@ -25,17 +28,26 @@ runs:
               case "$F" in */test/*) [ "$K" = test ] || continue ;; *) [ "$K" = main ] || continue ;; esac
               echo "$F"; return; done < <(git ls-tree -r --name-only "$BASE" -- "$D")
             D="$(dirname "$D")"; done; }
+
+        # 2. the Java family files added since the baseline
         step "listing the files added since $BASE"
         ADDED="$(ev git diff --name-only --diff-filter=A "$BASE" "$OSERA_TAG" -- '*.java' '*.kt' '*.groovy' '*.scala')"
         if [ -z "$ADDED" ]; then record not-applicable "no Java source or test file added between $BASE and $OSERA_TAG"; exit 0; fi
+
+        # 3. each new file against the header of its nearest existing neighbour
         CHECKED=0; PROBLEMS=""; LINES=""
         while IFS= read -r P; do
           [ -n "$P" ] || continue
-          N="$(nearest "$P")"; if [ -z "$N" ]; then LINES="$LINES; $P: no existing file of the same kind nearby"; continue; fi
-          REF="$(header "$BASE" "$N")"; if [ -z "$REF" ]; then LINES="$LINES; $P: the neighbour $N has no header block"; continue; fi
+          N="$(nearest "$P")"
+          if [ -z "$N" ]; then LINES="$LINES; $P: no existing file of the same kind nearby"; continue; fi
+          REF="$(header "$BASE" "$N")"
+          if [ -z "$REF" ]; then LINES="$LINES; $P: the neighbour $N has no header block"; continue; fi
           CHECKED=$((CHECKED+1))
-          if [ "$(header "$OSERA_TAG" "$P")" = "$REF" ]; then LINES="$LINES; $P: header matches $N"; else PROBLEMS="$PROBLEMS $P"; LINES="$LINES; $P: header differs from $N"; fi
+          if [ "$(header "$OSERA_TAG" "$P")" = "$REF" ]; then LINES="$LINES; $P: header matches $N"
+          else PROBLEMS="$PROBLEMS $P"; LINES="$LINES; $P: header differs from $N"; fi
         done <<<"$ADDED"
+
+        # 4. the verdict: nothing to compare against is not-applicable, one difference is a fail
         N_ADDED="$(wc -l <<<"$ADDED" | tr -d ' ')"
         if [ "$CHECKED" = 0 ]; then record not-applicable "$N_ADDED new file(s), no header convention to compare against${LINES}"
         elif [ -n "$PROBLEMS" ]; then record fail "header differs on:$PROBLEMS${LINES}"

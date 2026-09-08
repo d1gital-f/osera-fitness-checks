@@ -13,17 +13,28 @@ runs:
         check_is REL-004 CP-REL-004-03 ""
         F=.osera/patch-evidence.yaml
         expect "the account that pushed the tag and every author and committer of the commits between $BASE and $OSERA_TAG are in the producer's github_users"
+
+        # 1. the evidence file, the producer, and the accounts its entry allows (a proposal: warn, never fail)
         step "reading $F and the approved producers file"
         [ -f "$F" ] || { record warn "$F is not in the repository at $OSERA_TAG"; exit 0; }
         P="$(ev yq -r '.producer // ""' "$F")"
         ALLOWED="$(P="$P" ev yq -r '.producers[] | select(.id == env(P)) | .github_users[]' "$OSERA_APPROVED_PRODUCERS" | sort -u)"
         [ -n "$ALLOWED" ] || { record warn "no approved producers entry with github_users for producer '$P', accounts cannot be checked"; exit 0; }
+
+        # 2. without the baseline tag there is no range of commits: the check stops and is recorded not-tested
         step "resolving the baseline tag $BASE"
         ev git rev-parse -q --verify "refs/tags/${BASE}^{commit}" >/dev/null
+
+        # 3. the accounts: who pushed the tag (run context), and the author and committer of every commit in the range (API)
         step "reading the accounts behind the commits from the GitHub API"
-        SHAS="$(ev git rev-list "${BASE}..${OSERA_TAG}")"; ACCOUNTS="$OSERA_ACTOR"
-        for S in $SHAS; do ACCOUNTS="$ACCOUNTS $(ev gh api "repos/${OSERA_REPOSITORY}/commits/${S}" --jq '[.author.login, .committer.login] | map(select(. != null and . != "web-flow")) | join(" ")')"; done
+        SHAS="$(ev git rev-list "${BASE}..${OSERA_TAG}")"
+        ACCOUNTS="$OSERA_ACTOR"
+        for S in $SHAS; do
+          ACCOUNTS="$ACCOUNTS $(ev gh api "repos/${OSERA_REPOSITORY}/commits/${S}" --jq '[.author.login, .committer.login] | map(select(. != null and . != "web-flow")) | join(" ")')"
+        done
         ACCOUNTS="$(tr ' ' '\n' <<<"$ACCOUNTS" | grep -v '^$' | sort -u)"
+
+        # 4. every account must be in the entry
         BAD="$(comm -23 <(echo "$ACCOUNTS") <(echo "$ALLOWED") | paste -sd, -)"
         DETAIL="tag pushed by $OSERA_ACTOR; accounts on the $(wc -l <<<"$SHAS" | tr -d ' ') commit(s) since $BASE: $(paste -sd, - <<<"$ACCOUNTS"); allowed for '$P': $(paste -sd, - <<<"$ALLOWED")"
         if [ -n "$BAD" ]; then record warn "account(s) not in the entry: $BAD. $DETAIL"; else record pass "$DETAIL"; fi

@@ -13,11 +13,17 @@ runs:
         check_is REL-004 CP-REL-004-02 ""
         F=.osera/patch-evidence.yaml
         expect "the producer named in $F has an entry in the approved producers file for pack $OSERA_PACK"
+
+        # 1. the evidence file and the producer it names (a proposal: warn, never fail)
         step "reading $F and the approved producers file"
         [ -f "$F" ] || { record warn "$F is not in the repository at $OSERA_TAG"; exit 0; }
         P="$(ev yq -r '.producer // ""' "$F")"
+
+        # 2. the approved producers file must be for this pack
         PACK="$(ev yq -r '.applies_to_pack // ""' "$OSERA_APPROVED_PRODUCERS")"
         IDS="$(ev yq -r '.producers[].id' "$OSERA_APPROVED_PRODUCERS")"
         if [ "$PACK" != "$OSERA_PACK" ]; then record warn "the approved producers file applies to '$PACK', not $OSERA_PACK"; exit 0; fi
+
+        # 3. the producer id must be one of the entries
         if grep -qxF "$P" <<<"$IDS"; then record pass "producer '$P' has an entry ($(wc -l <<<"$IDS" | tr -d ' ') entries in the file)"
         else record warn "producer '$P' has no entry; ids present: $(paste -sd, - <<<"$IDS")"; fi
