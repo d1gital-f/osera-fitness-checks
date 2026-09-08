@@ -12,24 +12,45 @@ runs:
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
         check_is REL-001 REL-001.REQ-001 REL-001.CHECK-001
         F=.osera/patch-evidence.yaml
-        expect "$F has a tests block with commit (the tagged commit, or an earlier one followed only by OSERA plumbing), command, runtime, report and result pass"
+        PLUMBING='^(\.osera/patch-evidence\.yaml|\.github/workflows/osera-fitness\.ya?ml)$'
+        expect "$F has a tests block with commit, command, runtime, report and result pass; the tested commit is the tagged commit, or an earlier one with only the OSERA plumbing files changed after it"
+
+        # 1. the evidence file must be in the repository at the tag
         step "reading $F"
         [ -f "$F" ] || record fail "$F is not in the repository at $OSERA_TAG"
+
+        # 2. show the tests block as the producer wrote it
         ev yq '.tests // {}' "$F" >/dev/null
-        MISSING=""; for K in commit command runtime report result; do V="$(yq -r ".tests.$K // \"\"" "$F")"; [ -n "$V" ] || MISSING="$MISSING $K"; done
+
+        # 3. the five fields must be filled
+        MISSING=""
+        for K in commit command runtime report result; do
+          [ -n "$(yq -r ".tests.$K // \"\"" "$F")" ] || MISSING="$MISSING $K"
+        done
         [ -z "$MISSING" ] || record fail "tests block missing:$MISSING"
-        REL_SHA="$(ev git rev-parse "refs/tags/${OSERA_TAG}^{commit}")"; TESTED="$(yq -r .tests.commit "$F")"
+
+        # 4. tests.commit must be a commit of this repository
+        TESTED="$(yq -r .tests.commit "$F")"
         step "resolving tests.commit $TESTED"
         TESTED_SHA="$(ev git rev-parse -q --verify "${TESTED}^{commit}" || true)"
         [ -n "$TESTED_SHA" ] || record fail "tests.commit $TESTED is not a commit of this repository"
-        WHERE="the tagged commit"
-        if [ "$TESTED_SHA" != "$REL_SHA" ]; then
+
+        # 5. the tested commit is the tagged commit, or an ancestor with only the evidence file and the caller workflow changed after it
+        #    (the producer tests, then commits those two files, then tags)
+        REL_SHA="$(ev git rev-parse "refs/tags/${OSERA_TAG}^{commit}")"
+        if [ "$TESTED_SHA" = "$REL_SHA" ]; then
+          WHERE="the tagged commit"
+        else
           ev git merge-base --is-ancestor "$TESTED_SHA" "$REL_SHA" >/dev/null || record fail "tests.commit $TESTED_SHA is not an ancestor of the tagged commit $REL_SHA"
           CHANGED="$(ev git diff --name-only "$TESTED_SHA" "$REL_SHA")"
-          EXTRA="$(grep -vE '^(\.osera/patch-evidence\.yaml|\.github/workflows/osera-fitness\.ya?ml)$' <<<"$CHANGED" || true)"
+          EXTRA="$(grep -vE "$PLUMBING" <<<"$CHANGED" || true)"
           [ -z "$EXTRA" ] || record fail "files changed after the tested commit $TESTED_SHA beyond the OSERA plumbing: $(paste -sd, - <<<"$EXTRA")"
-          WHERE="$(wc -l <<<"$CHANGED" | tr -d ' ') plumbing file(s) changed after it, nothing else"
+          N="$(ev git rev-list --count "$TESTED_SHA..$REL_SHA")"
+          WHERE="$N commit(s) before the tag, only the OSERA plumbing files changed after it"
         fi
+
+        # 6. the result must be pass
         RESULT="$(yq -r .tests.result "$F" | tr '[:upper:]' '[:lower:]')"
         [ "$RESULT" = pass ] || record fail "tests.result is $RESULT, not pass"
+
         record pass "tests ran on ${TESTED_SHA:0:12} ($WHERE): $(yq -r .tests.command "$F") on $(yq -r .tests.runtime "$F"), report $(yq -r .tests.report "$F"), result pass; the report contents are checked at the gate"
