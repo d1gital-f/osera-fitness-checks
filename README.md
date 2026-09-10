@@ -107,7 +107,7 @@ Actions take no inputs: the workflow sets the `OSERA_*` environment once and eve
 {
   "standard_pack": "OSERA-SP-0.1.0", "pack_checksum": null,
   "repository": "d1gital-f/patch-commons-codec", "release": "v1.16.0+osera-patch.001", "commit": "5c4ae60a...",
-  "artifact_digest": null, "library": "d1gital-f/osera-fitness-checks@4dcdf38...", "producer": "d1gital-f playground producr",
+  "artifact_digest": null, "library": "d1gital-f/fitness-checks@4dcdf38...", "producer": "d1gital-f playground producr",
   "result": "fail",
   "signature": "see the GitHub artifact attestation on this file",
   "standards": [{"standard": "FORK-003", "standard_version": "0.1.0", "status": "fail"}],

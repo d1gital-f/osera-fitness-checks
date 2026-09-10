@@ -32,7 +32,7 @@ jobs:
     # At the move to finos-osera these lines change and nothing else.
     env:
       GH_TOKEN: ${{ github.token }} # the checks read the fork parent and commit accounts through the API; the job's own token, read only
-      LIBRARY: d1gital-f/osera-fitness-checks
+      LIBRARY: d1gital-f/fitness-checks
       STANDARDS: finos-osera/remediation-standards # the approved producer registry lives here, docs/_data/approved_producers.yml (REL-004)
       STANDARDS_REF: main # the pack's release tag (OSERA-SP-0.1.0) once it exists; until then main
       REFERENCE: d1gital-f/patch-jackson-core
