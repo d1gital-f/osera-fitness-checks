@@ -34,10 +34,36 @@ export OSERA_EXPECTED_ORG OSERA_APPROVED_PRODUCERS OSERA_ACTOR OSERA_PACK OSERA_
 export OSERA_OWNER OSERA_OWNER_ID OSERA_IS_FORK
 mkdir -p "$OSERA_RESULTS_DIR"
 
-# derived from the release tag: v2.14.2+osera-patch.001 -> 2.14.2, 2.14.x, v2.14.2+patch.baseline
-VERSION="${OSERA_TAG#v}"
-VERSION="${VERSION%%+*}"
-LINE="${VERSION%.*}.x"
+# derived from the release tag, two forms (OSERA-SP-0.1.0):
+#   generic  v2.14.2+osera-patch.001      -> 2.14.2,      2.14.x, v2.14.2+patch.baseline
+#   Java     v5.3.39.1-osera-00001        -> 5.3.39,      5.3.x,  v5.3.39+patch.baseline   (REL-003-JAVA, numeric base)
+#   Java     v5.6.15.Final-osera-00001    -> 5.6.15.Final, 5.6.x, v5.6.15.Final+patch.baseline (qualified base)
+upstream_version_of() {
+  local tag="$1"
+  local version
+  # 1. drop the v prefix
+  version="${tag#v}"
+  # 2. generic form: everything before the + is the upstream version
+  if [[ "$version" == *+osera-patch.* ]]; then
+    version="${version%%+*}"
+    printf '%s\n' "$version"
+    return 0
+  fi
+  # 3. Java form: drop the -osera-NNNNN suffix
+  if [[ "$version" == *-osera-[0-9]* ]]; then
+    version="${version%-osera-*}"
+    # 4. numeric base: a fourth numeric component is the OSGi qualifier added by the patch, drop it
+    if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      version="${version%.*}"
+    fi
+    printf '%s\n' "$version"
+    return 0
+  fi
+  # 5. neither form: the tag as it is, the checks report the mismatch
+  printf '%s\n' "$version"
+}
+VERSION="$(upstream_version_of "$OSERA_TAG")"
+LINE="$(printf '%s' "$VERSION" | cut -d. -f1,2).x"
 BASE="v${VERSION}+patch.baseline"
 export VERSION LINE BASE
 

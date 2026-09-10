@@ -11,7 +11,7 @@ on:
   workflow_call:
     inputs:
       tag:
-        description: 'the release tag under test, for example v2.14.2+osera-patch.001'
+        description: 'the release tag under test, for example v5.3.39.1-osera-00001 (Java, REL-003-JAVA) or v2.14.2+osera-patch.001 (generic)'
         required: true
         type: string
       reference:

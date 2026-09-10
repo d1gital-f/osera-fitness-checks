@@ -8,7 +8,9 @@ run-name: OSERA fitness checks on ${{ github.ref_name }}
 
 on:
   push:
-    tags: ['v*\+osera-patch.*'] # the + must be escaped, GitHub treats it as a special character in tag filters
+    tags: # the two release tag forms of OSERA-SP-0.1.0: the Java CARE style form (REL-003-JAVA) and the generic form (the + must be escaped)
+      - 'v*-osera-*'
+      - 'v*\+osera-patch.*'
 
 permissions:
   contents: read # for checking out the repository.

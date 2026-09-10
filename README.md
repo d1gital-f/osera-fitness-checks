@@ -32,7 +32,9 @@ name: OSERA fitness checks
 run-name: OSERA fitness checks on ${{ github.ref_name }}
 on:
   push:
-    tags: ['v*\+osera-patch.*']
+    tags:
+      - 'v*-osera-*'
+      - 'v*\+osera-patch.*'
 permissions:
   contents: read # for checking out the repository.
   id-token: write # for creating OIDC tokens for signing.
@@ -46,7 +48,7 @@ jobs:
 
 Inputs:
 
-- `tag` (string, required): the release tag under test, for example `v2.14.2+osera-patch.001`.
+- `tag` (string, required): the release tag under test, for example `v5.3.39.1-osera-00001` (Java, the CARE style form of REL-003-JAVA) or `v2.14.2+osera-patch.001` (the generic form). The upstream version, the line and the baseline tag are derived from either form (`lib/record.sh`).
 - `reference` (string, ignored unless the caller is the library itself): which reference repository the library's own e2e checks.
 
 Nothing else: the organisation FORK-001 expects, the library version the actions run from and the repository under test are fixed in the workflow file or derived from the run itself, never taken from the caller.
@@ -125,5 +127,5 @@ Actions take no inputs: the workflow sets the `OSERA_*` environment once and eve
 
 ## Notes
 
-- In GitHub tag filters `+` is a special character: the pattern must be written `v*\+osera-patch.*`, otherwise the workflow never parses.
+- In GitHub tag filters `+` is a special character: the generic pattern must be written `v*\+osera-patch.*`, otherwise the workflow never parses. The Java form needs no escaping: `v*-osera-*`.
 - Because the caller file lives on the patch branch and not on the repository's default branch, the Actions tab lists it under its path; `run-name` titles every run by the tag.
