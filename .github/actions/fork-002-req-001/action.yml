@@ -1,5 +1,5 @@
 name: FORK-002.REQ-001
-description: "Patch providers must create version-scoped source workflow branches using patch/<version>"
+description: "FORK-002.REQ-001 (FORK-002 0.1.0): Patch providers must create version-scoped source workflow branches using patch/<version>"
 author: ControlPlane for the FINOS OSERA Exchange
 # Reads the job environment set by the fitness workflow (see lib/record.sh for the list of OSERA_* variables). No inputs.
 runs:
@@ -10,7 +10,7 @@ runs:
       run: |
         set -euo pipefail
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
-        check_is FORK-002 FORK-002.REQ-001 FORK-002.CHECK-001
+        check_is FORK-002 0.1.0 FORK-002.REQ-001 FORK-002.CHECK-001
         expect "a branch patch/$VERSION or patch/$LINE exists and contains the release tag $OSERA_TAG"
 
         # 1. the patch branches that contain the release tag, among the two names the standard allows

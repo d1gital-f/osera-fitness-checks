@@ -1,5 +1,5 @@
 name: REL-001.REQ-001
-description: "Patch providers must publish test provenance for the patched artifact: the tested commit, test command or suite, runtime, test report, and passing test result"
+description: "REL-001.REQ-001 (REL-001 0.1.0): Patch providers must publish test provenance for the patched artifact: the tested commit, test command or suite, runtime, test report, and passing test result"
 author: ControlPlane for the FINOS OSERA Exchange
 # Reads the job environment set by the fitness workflow (see lib/record.sh for the list of OSERA_* variables). No inputs.
 runs:
@@ -10,7 +10,7 @@ runs:
       run: |
         set -euo pipefail
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
-        check_is REL-001 REL-001.REQ-001 REL-001.CHECK-001
+        check_is REL-001 0.1.0 REL-001.REQ-001 REL-001.CHECK-001
         F=.osera/patch-evidence.yaml
         PLUMBING='^(\.osera/patch-evidence\.yaml|\.github/workflows/osera-fitness\.ya?ml)$'
         expect "$F has a tests block with commit, command, runtime, report and result pass; the tested commit is the tagged commit, or an earlier one with only the OSERA plumbing files changed after it"

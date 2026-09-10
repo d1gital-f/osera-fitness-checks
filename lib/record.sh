@@ -25,13 +25,14 @@
 : "${OSERA_APPROVED_PRODUCERS:=.osera-standards/docs/_data/approved_producers.yml}" # the standards repository at the pack ref, checked out by the workflow
 : "${OSERA_ACTOR:=${GITHUB_ACTOR:-}}"
 : "${OSERA_PACK:=OSERA-SP-0.1.0}"
+: "${OSERA_PACK_FILE:=.osera-standards/docs/catalog/packs/${OSERA_PACK}.json}" # the pack file at the standards ref, names every standard's version
 : "${OSERA_LIBRARY:=}"
 : "${OSERA_REGISTRY_REF:=}"   # <repository>@<commit> of the registry the checks read, set by the workflow
 : "${OSERA_RESULTS_DIR:=${RUNNER_TEMP:-.}/osera-results}"
 : "${OSERA_OWNER:=}"     # from the run context when the caller is the repository under test, empty otherwise
 : "${OSERA_OWNER_ID:=}"
 : "${OSERA_IS_FORK:=}"
-export OSERA_EXPECTED_ORG OSERA_APPROVED_PRODUCERS OSERA_ACTOR OSERA_PACK OSERA_LIBRARY OSERA_RESULTS_DIR OSERA_REGISTRY_REF
+export OSERA_EXPECTED_ORG OSERA_APPROVED_PRODUCERS OSERA_ACTOR OSERA_PACK OSERA_PACK_FILE OSERA_LIBRARY OSERA_RESULTS_DIR OSERA_REGISTRY_REF
 export OSERA_OWNER OSERA_OWNER_ID OSERA_IS_FORK
 mkdir -p "$OSERA_RESULTS_DIR"
 
@@ -71,12 +72,27 @@ export VERSION LINE BASE
 EXPECTED=""
 STEP=""
 
+# check_is <standard> <standard version the check implements> <requirement> <check id or empty>
+# The version is the one the action was written against. At record time it is compared with the version the pack
+# names for that standard (the pack file at the standards ref); a difference records the requirement as not-tested,
+# so a check written for an older standard never passes under a newer pack.
 check_is() {
   CHECK_STD="$1"
-  CHECK_REQ="$2"
-  CHECK_ID="$3"
+  CHECK_VERSION="$2"
+  CHECK_REQ="$3"
+  CHECK_ID="$4"
   EVFILE="$OSERA_RESULTS_DIR/.$CHECK_REQ.evidence"
   : > "$EVFILE"
+}
+
+# the version the pack names for a standard, from the pack file; empty when the pack file or the standard is missing
+pack_version_of() {
+  local standard="$1"
+  if [ ! -f "$OSERA_PACK_FILE" ]; then
+    printf ''
+    return 0
+  fi
+  jq -r --arg s "$standard" '[.standards.included_standards[], .standards.observe_standards[] | select(.id == $s) | .version] | first // ""' "$OSERA_PACK_FILE"
 }
 
 expect() {
@@ -119,10 +135,22 @@ given() {
 }
 
 record() {
-  local status="$1" observed="$2"
-  jq -n --arg standard "$CHECK_STD" --arg requirement "$CHECK_REQ" --arg check "$CHECK_ID" --arg status "$status" \
+  local status="$1" observed="$2" pack_version
+  # 1. the version the pack names for this standard, against the version this check implements
+  pack_version="$(pack_version_of "$CHECK_STD")"
+  if [ -z "$pack_version" ]; then
+    status="not-tested"
+    observed="the pack file $OSERA_PACK_FILE does not name $CHECK_STD, the check (written for $CHECK_STD $CHECK_VERSION) was not counted"
+    pack_version="$CHECK_VERSION"
+  elif [ "$pack_version" != "$CHECK_VERSION" ]; then
+    status="not-tested"
+    observed="the check implements $CHECK_STD $CHECK_VERSION, the pack $OSERA_PACK names $CHECK_STD $pack_version, the check was not counted"
+  fi
+  # 2. the record
+  jq -n --arg standard "$CHECK_STD" --arg standard_version "$pack_version" --arg check_version "$CHECK_VERSION" \
+        --arg requirement "$CHECK_REQ" --arg check "$CHECK_ID" --arg status "$status" \
         --arg expected "$EXPECTED" --arg observed "$observed" --slurpfile evidence "$EVFILE" \
-        '{standard: $standard, standard_version: "0.1.0", requirement: $requirement,
+        '{standard: $standard, standard_version: $standard_version, check_version: $check_version, requirement: $requirement,
           check: (if $check == "" then null else $check end), status: $status,
           expected: $expected, observed: $observed, evidence: $evidence}' > "$OSERA_RESULTS_DIR/$CHECK_REQ.json"
   echo "$CHECK_REQ $status: $observed"

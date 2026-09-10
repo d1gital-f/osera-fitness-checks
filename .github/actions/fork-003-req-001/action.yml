@@ -1,5 +1,5 @@
 name: FORK-003.REQ-001
-description: "Patch providers must tag the unpatched baseline source commit using v<VERSION>+patch.baseline"
+description: "FORK-003.REQ-001 (FORK-003 0.1.0): Patch providers must tag the unpatched baseline source commit using v<VERSION>+patch.baseline"
 author: ControlPlane for the FINOS OSERA Exchange
 # Reads the job environment set by the fitness workflow (see lib/record.sh for the list of OSERA_* variables). No inputs.
 runs:
@@ -10,7 +10,7 @@ runs:
       run: |
         set -euo pipefail
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
-        check_is FORK-003 FORK-003.REQ-001 FORK-003.CHECK-001
+        check_is FORK-003 0.1.0 FORK-003.REQ-001 FORK-003.CHECK-001
         expect "tag $BASE exists and points to a commit strictly before $OSERA_TAG on the same history"
 
         # 1. the baseline tag must exist

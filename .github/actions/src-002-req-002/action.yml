@@ -1,5 +1,5 @@
 name: SRC-002.REQ-002
-description: "Backported commits carrying upstream-authored code should name the upstream commit and include a Co-authored-by trailer for the upstream author (SHOULD, advisory)"
+description: "SRC-002.REQ-002 (SRC-002 0.1.0): Backported commits carrying upstream-authored code should name the upstream commit and include a Co-authored-by trailer for the upstream author (SHOULD, advisory)"
 author: ControlPlane for the FINOS OSERA Exchange
 # Reads the job environment set by the fitness workflow (see lib/record.sh for the list of OSERA_* variables). No inputs.
 runs:
@@ -10,7 +10,7 @@ runs:
       run: |
         set -euo pipefail
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
-        check_is SRC-002 SRC-002.REQ-002 SRC-002.CHECK-002
+        check_is SRC-002 0.1.0 SRC-002.REQ-002 SRC-002.CHECK-002
         expect "every commit between $BASE and $OSERA_TAG whose message names an upstream commit (cherry picked from, backport of, upstream commit) carries a Co-authored-by trailer naming the upstream author"
 
         # 1. without the baseline tag there is no range to look at: the check stops and is recorded not-tested

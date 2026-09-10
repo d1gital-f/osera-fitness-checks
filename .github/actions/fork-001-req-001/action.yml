@@ -1,5 +1,5 @@
 name: FORK-001.REQ-001
-description: "Patched-source repositories must live in github.com/finos-osera unless the working group approves an exception"
+description: "FORK-001.REQ-001 (FORK-001 0.1.0): Patched-source repositories must live in github.com/finos-osera unless the working group approves an exception"
 author: ControlPlane for the FINOS OSERA Exchange
 # Reads the job environment set by the fitness workflow (see lib/record.sh for the list of OSERA_* variables). No inputs.
 runs:
@@ -10,7 +10,7 @@ runs:
       run: |
         set -euo pipefail
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
-        check_is FORK-001 FORK-001.REQ-001 FORK-001.CHECK-001
+        check_is FORK-001 0.1.0 FORK-001.REQ-001 FORK-001.CHECK-001
         expect "repository $OSERA_REPOSITORY is owned by the organisation $OSERA_EXPECTED_ORG"
 
         # 1. who owns the repository: from the run context GitHub sets (the caller cannot write it),

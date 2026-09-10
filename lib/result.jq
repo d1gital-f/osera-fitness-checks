@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Builds result.json from the per requirement records (jq -s: the input is the array of all records).
-# Arguments: $pack $repo $release $commit $producer $library $registry_ref.
+# Arguments: $pack $pack_checksum $repo $release $commit $producer $library $registry_ref.
 
 # The one rollup, used per standard and at the top: any fail is a fail, then warn, then not-tested, then pass;
 # not-applicable only when everything underneath is.
@@ -20,11 +20,11 @@ def rollup:
 | (map(select(.requirement | startswith("CP-")))) as $proposals
 
 # one status per standard, the fitness page's view
-| ($checks | group_by(.standard) | map({standard: .[0].standard, standard_version: "0.1.0", status: rollup})) as $standards
+| ($checks | group_by(.standard) | map({standard: .[0].standard, standard_version: .[0].standard_version, status: rollup})) as $standards
 
 | {
     standard_pack: $pack,
-    pack_checksum: null,
+    pack_checksum: (if $pack_checksum == "" then null else $pack_checksum end),
     registry_ref: (if $registry_ref == "" then null else $registry_ref end),
     repository: $repo,
     release: $release,

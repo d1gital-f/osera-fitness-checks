@@ -29,6 +29,49 @@ jobs:
           tar xzf actionlint.tar.gz actionlint
       - name: actionlint on the workflows
         run: find .github/workflows -name '*.yaml' | xargs ./actionlint
+      - name: Checkout the standards repository at the ref the fitness workflow uses
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # the token is not left in .git/config
+          repository: finos-osera/remediation-standards
+          ref: main # kept equal to STANDARDS_REF in fitness.yaml, the step below checks that
+          path: .osera-standards
+      - name: Every check implements the standard version the pack names, and says so in its description
+        run: |
+          set -euo pipefail
+          # 1. the ref this job checked out must be the one the fitness workflow reads
+          REF="$(yq -r '.jobs.fitness.env.STANDARDS_REF' .github/workflows/fitness.yaml)"
+          if [ "$REF" != "main" ]
+          then
+            echo "fitness.yaml reads the standards at $REF, this lint job checked out main: update the ref above"
+            exit 1
+          fi
+          # 2. the pack file the checks read
+          PACK="$(yq -r '.jobs.fitness.steps[0].run' .github/workflows/fitness.yaml | sed -n 's/.*OSERA_PACK=\(OSERA-SP-[0-9.]*\).*/\1/p' | head -1)"
+          FILE=".osera-standards/docs/catalog/packs/$PACK.json"
+          test -f "$FILE"
+          echo "pack $PACK, file $FILE"
+          # 3. every action: the check_is line and the description carry the same standard and version, and the pack agrees
+          failed=0
+          for f in .github/actions/*/action.yml
+          do
+            case "$f" in *write-result*) continue ;; esac
+            read -r STD VER REQ _ <<<"$(yq -r '.runs.steps[0].run' "$f" | sed -n 's/^ *check_is \(.*\)$/\1/p' | head -1)"
+            DESC="$(yq -r '.description' "$f")"
+            PACKV="$(jq -r --arg s "$STD" '[.standards.included_standards[], .standards.observe_standards[] | select(.id == $s) | .version] | first // ""' "$FILE")"
+            case "$DESC" in
+              "$REQ ($STD $VER): "*) ;;
+              *) echo "$f: description does not start with \"$REQ ($STD $VER): \""; failed=1 ;;
+            esac
+            if [ "$PACKV" != "$VER" ]
+            then
+              echo "$f: implements $STD $VER, the pack $PACK names $STD ${PACKV:-nothing}"
+              failed=1
+            else
+              echo "ok $f: $STD $VER"
+            fi
+          done
+          exit "$failed"
       - name: shellcheck on the shared library and on every action's bash
         run: |
           shellcheck -s bash lib/record.sh

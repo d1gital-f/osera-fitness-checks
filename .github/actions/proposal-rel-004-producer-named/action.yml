@@ -1,5 +1,5 @@
 name: CP-REL-004-01 (proposal)
-description: "ControlPlane proposal (remediation-standards 52), not a requirement on the site: the evidence file has a producer line. Warns, never fails"
+description: "CP-REL-004-01 (REL-004 0.1.0): ControlPlane proposal (remediation-standards 52), not a requirement on the site: the evidence file has a producer line. Warns, never fails"
 author: ControlPlane for the FINOS OSERA Exchange
 # Reads the job environment set by the fitness workflow (see lib/record.sh for the list of OSERA_* variables). No inputs.
 runs:
@@ -10,7 +10,7 @@ runs:
       run: |
         set -euo pipefail
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
-        check_is REL-004 CP-REL-004-01 ""
+        check_is REL-004 0.1.0 CP-REL-004-01 ""
         F=.osera/patch-evidence.yaml
         expect "$F names the producer (producer: <id as in the approved producers file>)"
 

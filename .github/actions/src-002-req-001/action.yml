@@ -1,5 +1,5 @@
 name: SRC-002.REQ-001
-description: "Backport evidence must link to the upstream commit, commit range, pull request, advisory, or release note defining the fix"
+description: "SRC-002.REQ-001 (SRC-002 0.1.0): Backport evidence must link to the upstream commit, commit range, pull request, advisory, or release note defining the fix"
 author: ControlPlane for the FINOS OSERA Exchange
 # Reads the job environment set by the fitness workflow (see lib/record.sh for the list of OSERA_* variables). No inputs.
 runs:
@@ -10,7 +10,7 @@ runs:
       run: |
         set -euo pipefail
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
-        check_is SRC-002 SRC-002.REQ-001 SRC-002.CHECK-001
+        check_is SRC-002 0.1.0 SRC-002.REQ-001 SRC-002.CHECK-001
         F=.osera/patch-evidence.yaml
         expect "every entry under fixes in $F names a CVE and links the upstream fix (commit, pull request, advisory or release note) with an https URL"
 

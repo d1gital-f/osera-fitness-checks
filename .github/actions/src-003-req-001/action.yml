@@ -1,5 +1,5 @@
 name: SRC-003.REQ-001
-description: "New source or test files added by a patch must follow the prevailing license-header convention of the surrounding project"
+description: "SRC-003.REQ-001 (SRC-003 0.1.0): New source or test files added by a patch must follow the prevailing license-header convention of the surrounding project"
 author: ControlPlane for the FINOS OSERA Exchange
 # Reads the job environment set by the fitness workflow (see lib/record.sh for the list of OSERA_* variables). No inputs.
 runs:
@@ -10,7 +10,7 @@ runs:
       run: |
         set -euo pipefail
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
-        check_is SRC-003 SRC-003.REQ-001 SRC-003.CHECK-001
+        check_is SRC-003 0.1.0 SRC-003.REQ-001 SRC-003.CHECK-001
         expect "every Java source or test file added between $BASE and $OSERA_TAG carries the licence header of the nearest existing file of the same kind in the same module (years, whitespace and asterisks ignored)"
 
         # the leading block comment of a file at a revision, years replaced by YEAR, whitespace and asterisks removed;

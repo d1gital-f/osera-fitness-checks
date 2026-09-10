@@ -1,5 +1,5 @@
 name: FORK-001.REQ-002
-description: "Patched-source repositories must use the prefix patch- followed by the upstream repository or artifact name"
+description: "FORK-001.REQ-002 (FORK-001 0.1.0): Patched-source repositories must use the prefix patch- followed by the upstream repository or artifact name"
 author: ControlPlane for the FINOS OSERA Exchange
 # Reads the job environment set by the fitness workflow (see lib/record.sh for the list of OSERA_* variables). No inputs.
 runs:
@@ -10,7 +10,7 @@ runs:
       run: |
         set -euo pipefail
         source "$GITHUB_ACTION_PATH/../../../lib/record.sh"
-        check_is FORK-001 FORK-001.REQ-002 FORK-001.CHECK-002
+        check_is FORK-001 0.1.0 FORK-001.REQ-002 FORK-001.CHECK-002
         NAME="${OSERA_REPOSITORY##*/}"
         expect "repository name is patch-<name>: the patch- prefix, then the upstream repository or artifact being patched"
 
