@@ -8,7 +8,7 @@ This repository contains the reusable GitHub Workflow and the Composite Actions 
 fitness checks of the [OSERA Remediation Standards](https://standards.osera.finos.org/) on a patch repository
 at a release tag. One action per requirement of the standards pack, plain bash with git, jq and yq, one signed result.
 
-The library lives in the `osera-forks` organisation next to the patch repositories. The organisation the checks expect a patch repository in, and the `uses:` owner in the caller, follow the library's home.
+The library lives in the `finos-osera-forks` organisation next to the patch repositories. The organisation the checks expect a patch repository in, and the `uses:` owner in the caller, follow the library's home.
 
 ## The standard version a check implements
 
