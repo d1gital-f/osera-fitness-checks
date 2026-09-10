@@ -1,11 +1,12 @@
-# Playground copy of the approved producer registry, in the entry shape proposed on
-# https://github.com/finos-osera/remediation-standards/issues/52. The real file lives on the
-# standards repository (docs/_data/approved_producers.yml) and is empty on 8 Sept 2026.
+# Dev copy of the approved producer registry, in the shape ratified in OSERA-SP-0.1.0 (REL-004).
+# The production library carries the real entries (the standards repository's docs/_data/approved_producers.yml).
+# This copy names the people who exercise the dev Exchange as producers.
+# staging_account is the producer's upload account on the dev osera-staging-maven, named when Fabian creates it.
 schema-version: 0.1.0
-status: playground
+status: dev
 applies_to_pack: OSERA-SP-0.1.0
 producers:
-  - id: d1gital-f playground producer
+  - id: controlplane-dev
     contact: francesco@control-plane.io
-    github_users: [d1gital-f]
-    staging_account: d1gital-f-deploy
+    github_users: [d1gital-f, datosh]
+    staging_account: controlplane-dev-deploy # placeholder, the dev Nexus deploy account is not created yet
