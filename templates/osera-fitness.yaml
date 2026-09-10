@@ -19,6 +19,6 @@ permissions:
 
 jobs:
   fitness:
-    uses: osera-forks/fitness-checks/.github/workflows/fitness.yaml@v1
+    uses: finos-osera-forks/fitness-checks/.github/workflows/fitness.yaml@v1
     with:
       tag: ${{ github.ref_name }}
