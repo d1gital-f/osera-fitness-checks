@@ -22,15 +22,16 @@
 : "${OSERA_TAG:?OSERA_TAG is required}"
 : "${OSERA_REPOSITORY:?OSERA_REPOSITORY is required}"
 : "${OSERA_EXPECTED_ORG:=osera-forks}"
-: "${OSERA_APPROVED_PRODUCERS:=.osera-fitness/approved-producers/approved_producers.yaml}"
+: "${OSERA_APPROVED_PRODUCERS:=.osera-standards/docs/_data/approved_producers.yml}" # the standards repository at the pack ref, checked out by the workflow
 : "${OSERA_ACTOR:=${GITHUB_ACTOR:-}}"
 : "${OSERA_PACK:=OSERA-SP-0.1.0}"
 : "${OSERA_LIBRARY:=}"
+: "${OSERA_REGISTRY_REF:=}"   # <repository>@<commit> of the registry the checks read, set by the workflow
 : "${OSERA_RESULTS_DIR:=${RUNNER_TEMP:-.}/osera-results}"
 : "${OSERA_OWNER:=}"     # from the run context when the caller is the repository under test, empty otherwise
 : "${OSERA_OWNER_ID:=}"
 : "${OSERA_IS_FORK:=}"
-export OSERA_EXPECTED_ORG OSERA_APPROVED_PRODUCERS OSERA_ACTOR OSERA_PACK OSERA_LIBRARY OSERA_RESULTS_DIR
+export OSERA_EXPECTED_ORG OSERA_APPROVED_PRODUCERS OSERA_ACTOR OSERA_PACK OSERA_LIBRARY OSERA_RESULTS_DIR OSERA_REGISTRY_REF
 export OSERA_OWNER OSERA_OWNER_ID OSERA_IS_FORK
 mkdir -p "$OSERA_RESULTS_DIR"
 

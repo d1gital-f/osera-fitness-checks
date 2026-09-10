@@ -38,7 +38,7 @@ runs:
         # 3. the result: the page's fields, one status per standard, one entry per requirement, the proposals
         jq -s -f "$LIB/result.jq" \
            --arg pack "$OSERA_PACK" --arg repo "$OSERA_REPOSITORY" --arg release "$OSERA_TAG" \
-           --arg commit "$COMMIT" --arg producer "$PRODUCER" --arg library "$OSERA_LIBRARY" \
+           --arg commit "$COMMIT" --arg producer "$PRODUCER" --arg library "$OSERA_LIBRARY" --arg registry_ref "$OSERA_REGISTRY_REF" \
            ./*.json > result.json
 
         echo "result=$(jq -r .result result.json)" >> "$GITHUB_OUTPUT"

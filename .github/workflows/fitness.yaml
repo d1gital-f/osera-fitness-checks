@@ -33,6 +33,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }} # the checks read the fork parent and commit accounts through the API; the job's own token, read only
       LIBRARY: d1gital-f/osera-fitness-checks
+      STANDARDS: finos-osera/remediation-standards # the approved producer registry lives here, docs/_data/approved_producers.yml (REL-004)
+      STANDARDS_REF: main # the pack's release tag (OSERA-SP-0.1.0) once it exists; until then main
       REFERENCE: d1gital-f/patch-jackson-core
     outputs:
       result: ${{ steps.result.outputs.result }}
@@ -82,7 +84,7 @@ jobs:
             echo "OSERA_TAG=$OSERA_TAG"
             echo "OSERA_REPOSITORY=$TARGET"
             echo "OSERA_EXPECTED_ORG=${LIBRARY%%/*}"
-            echo "OSERA_APPROVED_PRODUCERS=.osera-fitness/approved-producers/approved_producers.yaml"
+            echo "OSERA_APPROVED_PRODUCERS=.osera-standards/docs/_data/approved_producers.yml"
             echo "OSERA_ACTOR=$ACTOR"
             echo "OSERA_RESULTS_DIR=$RUNNER_TEMP/osera-results"
             echo "OSERA_PACK=OSERA-SP-0.1.0"
@@ -120,6 +122,15 @@ jobs:
           repository: ${{ env.LIBRARY }}
           ref: ${{ steps.target.outputs.library-ref }}
           path: .osera-fitness
+      - name: Checkout the standards repository, for the approved producer registry
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # the token is not left in .git/config
+          repository: ${{ env.STANDARDS }}
+          ref: ${{ env.STANDARDS_REF }}
+          path: .osera-standards
+      - name: The registry revision the checks read, recorded in the result
+        run: echo "OSERA_REGISTRY_REF=$STANDARDS@$(git -C .osera-standards rev-parse HEAD)" >> "$GITHUB_ENV"
       - name: The exact library commit the checks run from, recorded in the result
         id: library
         run: |
