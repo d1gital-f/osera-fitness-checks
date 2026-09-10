@@ -1,8 +1,8 @@
-# osera-fitness-checks
+# fitness-checks
 
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![lint](https://github.com/osera-forks/osera-fitness-checks/actions/workflows/lint.yaml/badge.svg)](https://github.com/osera-forks/osera-fitness-checks/actions/workflows/lint.yaml)
-[![e2e](https://github.com/osera-forks/osera-fitness-checks/actions/workflows/e2e.yaml/badge.svg)](https://github.com/osera-forks/osera-fitness-checks/actions/workflows/e2e.yaml)
+[![lint](https://github.com/osera-forks/fitness-checks/actions/workflows/lint.yaml/badge.svg)](https://github.com/osera-forks/fitness-checks/actions/workflows/lint.yaml)
+[![e2e](https://github.com/osera-forks/fitness-checks/actions/workflows/e2e.yaml/badge.svg)](https://github.com/osera-forks/fitness-checks/actions/workflows/e2e.yaml)
 
 This repository contains the reusable GitHub Workflow and the Composite Actions that run the source side
 fitness checks of the [OSERA Remediation Standards](https://standards.osera.finos.org/) on a patch repository
@@ -45,7 +45,7 @@ permissions:
   attestations: write # for GitHub Attestations.
 jobs:
   fitness:
-    uses: osera-forks/osera-fitness-checks/.github/workflows/fitness.yaml@v1
+    uses: osera-forks/fitness-checks/.github/workflows/fitness.yaml@v1
     with:
       tag: ${{ github.ref_name }}
 ```
