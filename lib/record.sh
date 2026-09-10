@@ -21,7 +21,7 @@
 
 : "${OSERA_TAG:?OSERA_TAG is required}"
 : "${OSERA_REPOSITORY:?OSERA_REPOSITORY is required}"
-: "${OSERA_EXPECTED_ORG:=osera-forks}"
+: "${OSERA_EXPECTED_ORG:=finos-osera-forks}"
 : "${OSERA_APPROVED_PRODUCERS:=.osera-standards/docs/_data/approved_producers.yml}" # the standards repository at the pack ref, checked out by the workflow
 : "${OSERA_ACTOR:=${GITHUB_ACTOR:-}}"
 : "${OSERA_PACK:=OSERA-SP-0.1.0}"
