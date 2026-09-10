@@ -26,14 +26,13 @@ on:
 
 jobs:
   fitness:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned image, not the moving latest
     # Fixed here, never taken from the caller: where this library lives (also the organisation FORK-001 expects),
-    # the tag the actions are checked out at, and the reference repository the library's own e2e checks.
+    # and the reference repository the library's own e2e checks. The actions are checked out at the commit of this workflow file (step 1).
     # At the move to finos-osera these lines change and nothing else.
     env:
       GH_TOKEN: ${{ github.token }} # the checks read the fork parent and commit accounts through the API; the job's own token, read only
       LIBRARY: d1gital-f/osera-fitness-checks
-      LIBRARY_REF: v1 # the moving major tag the callers pin; the result records the exact commit it resolved to
       REFERENCE: d1gital-f/patch-jackson-core
     outputs:
       result: ${{ steps.result.outputs.result }}
@@ -58,7 +57,24 @@ jobs:
           OWNER_ID: ${{ github.repository_owner_id }}
           IS_FORK: ${{ github.event.repository.fork }}
         run: |
-          if [ "$CALLER" = "$LIBRARY" ]; then TARGET="${REFERENCE_INPUT:-$REFERENCE}"; REF="$THIS_COMMIT"; else TARGET="$CALLER"; REF="$LIBRARY_REF"; fi
+          # 1. the library checking itself: the reference repository, the actions at the commit under test
+          if [ "$CALLER" = "$LIBRARY" ]; then
+            TARGET="${REFERENCE_INPUT:-$REFERENCE}"
+            REF="$THIS_COMMIT"
+          else
+            # 2. a producer's run: its own repository, the actions at the exact commit this workflow file came from.
+            #    The caller named a tag (v1); the OIDC token's job_workflow_sha claim says which commit that tag resolved to,
+            #    the same claim the attestation carries. The token is read for that claim only and never sent anywhere.
+            TARGET="$CALLER"
+            TOKEN="$(curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=osera-fitness-checks" | jq -r .value)"
+            CLAIMS="$(printf '%s' "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | awk '{ n = length($0) % 4; if (n == 2) { $0 = $0 "==" } else if (n == 3) { $0 = $0 "=" }; print }' | base64 -d)"
+            REF="$(printf '%s' "$CLAIMS" | jq -r '.job_workflow_sha // empty')"
+            if [ -z "$REF" ]; then
+              echo "::error::could not read job_workflow_sha from the OIDC token, refusing to check out the library at a moving tag"
+              exit 1
+            fi
+            echo "this workflow file: $(printf '%s' "$CLAIMS" | jq -r .job_workflow_ref) at $REF"
+          fi
           echo "repository=$TARGET" >> "$GITHUB_OUTPUT"
           echo "name=${TARGET##*/}" >> "$GITHUB_OUTPUT"
           echo "library-ref=$REF" >> "$GITHUB_OUTPUT"
@@ -81,6 +97,7 @@ jobs:
       - name: Checkout the patch repository at the tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false # the token is not left in .git/config
           repository: ${{ steps.target.outputs.repository }}
           ref: refs/tags/${{ inputs.tag }} # the tag ref itself, never a branch of the same name
           fetch-depth: 0
@@ -99,6 +116,7 @@ jobs:
       - name: Checkout the osera-fitness-checks library
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false # the token is not left in .git/config
           repository: ${{ env.LIBRARY }}
           ref: ${{ steps.target.outputs.library-ref }}
           path: .osera-fitness

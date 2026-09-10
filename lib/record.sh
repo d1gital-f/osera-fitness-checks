@@ -21,7 +21,7 @@
 
 : "${OSERA_TAG:?OSERA_TAG is required}"
 : "${OSERA_REPOSITORY:?OSERA_REPOSITORY is required}"
-: "${OSERA_EXPECTED_ORG:=finos-osera}"
+: "${OSERA_EXPECTED_ORG:=osera-forks}"
 : "${OSERA_APPROVED_PRODUCERS:=.osera-fitness/approved-producers/approved_producers.yaml}"
 : "${OSERA_ACTOR:=${GITHUB_ACTOR:-}}"
 : "${OSERA_PACK:=OSERA-SP-0.1.0}"

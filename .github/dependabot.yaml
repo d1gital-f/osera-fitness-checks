@@ -13,3 +13,5 @@ updates:
           - "*"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7 # a new action version waits a week before Dependabot proposes it

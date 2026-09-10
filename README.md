@@ -1,14 +1,14 @@
 # osera-fitness-checks
 
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![lint](https://github.com/d1gital-f/osera-fitness-checks/actions/workflows/lint.yaml/badge.svg)](https://github.com/d1gital-f/osera-fitness-checks/actions/workflows/lint.yaml)
-[![e2e](https://github.com/d1gital-f/osera-fitness-checks/actions/workflows/e2e.yaml/badge.svg)](https://github.com/d1gital-f/osera-fitness-checks/actions/workflows/e2e.yaml)
+[![lint](https://github.com/osera-forks/osera-fitness-checks/actions/workflows/lint.yaml/badge.svg)](https://github.com/osera-forks/osera-fitness-checks/actions/workflows/lint.yaml)
+[![e2e](https://github.com/osera-forks/osera-fitness-checks/actions/workflows/e2e.yaml/badge.svg)](https://github.com/osera-forks/osera-fitness-checks/actions/workflows/e2e.yaml)
 
 This repository contains the reusable GitHub Workflow and the Composite Actions that run the source side
 fitness checks of the [OSERA Remediation Standards](https://standards.osera.finos.org/) on a patch repository
 at a release tag. One action per requirement of the standards pack, plain bash with git, jq and yq, one signed result.
 
-Playground of 8 Sept 2026 in a personal space, not the finos-osera library yet: the organisation and the `uses:` owner are parameters.
+The library lives in the `osera-forks` organisation next to the patch repositories. The organisation the checks expect a patch repository in, and the `uses:` owner in the caller, follow the library's home.
 
 ## Workflows
 
@@ -41,7 +41,7 @@ permissions:
   attestations: write # for GitHub Attestations.
 jobs:
   fitness:
-    uses: finos-osera/osera-fitness-checks/.github/workflows/fitness.yaml@v1
+    uses: osera-forks/osera-fitness-checks/.github/workflows/fitness.yaml@v1
     with:
       tag: ${{ github.ref_name }}
 ```
