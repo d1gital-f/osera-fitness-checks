@@ -19,6 +19,16 @@ on:
         required: false
         default: ''
         type: string
+      rehearsal:
+        description: 'true for a rehearsal: the checks run as if the tag existed, the result is printed and uploaded, nothing is signed, so the gate can never accept it'
+        required: false
+        default: false
+        type: boolean
+      ref:
+        description: 'rehearsal only: the branch or commit to check as if it carried the tag (default: the ref the caller ran on)'
+        required: false
+        default: ''
+        type: string
     outputs:
       result:
         description: 'pass, warn, fail or not-tested'
@@ -102,10 +112,23 @@ jobs:
         with:
           persist-credentials: false # the token is not left in .git/config
           repository: ${{ steps.target.outputs.repository }}
-          ref: refs/tags/${{ inputs.tag }} # the tag ref itself, never a branch of the same name
+          ref: ${{ inputs.rehearsal && (inputs.ref || github.sha) || format('refs/tags/{0}', inputs.tag) }} # the tag ref itself, never a branch of the same name; in a rehearsal the ref to check as if it were tagged
           fetch-depth: 0
       - name: Fetch every branch and tag
         run: git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*' && git fetch --tags origin
+      - name: Rehearsal, the tag as it would be
+        if: ${{ inputs.rehearsal }}
+        env:
+          OSERA_TAG: ${{ inputs.tag }}
+        run: |
+          # 1. a rehearsal checks a commit as if the intended tag pointed at it: the tag is created here, locally, never pushed
+          if git rev-parse -q --verify "refs/tags/${OSERA_TAG}^{commit}" >/dev/null
+          then
+            echo "::error::the tag $OSERA_TAG already exists in the repository, a rehearsal is for a tag that does not exist yet"
+            exit 1
+          fi
+          git tag "$OSERA_TAG" HEAD
+          echo "rehearsal: $OSERA_TAG set locally on $(git rev-parse --short HEAD), nothing will be signed"
       - name: The tagged commit is HEAD
         id: commit
         env:
@@ -176,9 +199,12 @@ jobs:
       # 5. The result, signed twice with the workflow's identity: once on the file, for people (gh attestation verify),
       #    once under the SHA256 of the tagged commit id, for the gate, which computes that digest from the tag alone.
       - name: Write the result
+        env:
+          OSERA_REHEARSAL: ${{ inputs.rehearsal }}
         id: result
         uses: ./.osera-fitness/.github/actions/write-result
       - name: Sign the result
+        if: ${{ !inputs.rehearsal }}
         id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
@@ -186,6 +212,7 @@ jobs:
           predicate-type: https://osera.finos.org/fitness-result/v1
           predicate-path: ${{ steps.result.outputs.path }}
       - name: The gate's subject, sha256 of the tagged commit id
+        if: ${{ !inputs.rehearsal }}
         id: subject
         env:
           COMMIT: ${{ steps.commit.outputs.sha }}
@@ -194,6 +221,7 @@ jobs:
           echo "digest=$(printf '%s' "$COMMIT" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           echo "name=git:$REPOSITORY@$COMMIT" >> "$GITHUB_OUTPUT"
       - name: Sign the result again, under the gate's subject
+        if: ${{ !inputs.rehearsal }}
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-name: ${{ steps.subject.outputs.name }}
@@ -203,6 +231,7 @@ jobs:
 
       # 6. For people: the result and its Sigstore bundle as a workflow artifact.
       - name: Keep the bundle next to the result
+        if: ${{ !inputs.rehearsal }}
         env:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: cp "$BUNDLE" "$RUNNER_TEMP/osera-results/result.sigstore.json"

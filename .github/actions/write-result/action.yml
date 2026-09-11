@@ -50,6 +50,7 @@ runs:
            --arg pack "$OSERA_PACK" --arg repo "$OSERA_REPOSITORY" --arg release "$OSERA_TAG" \
            --arg commit "$COMMIT" --arg producer "$PRODUCER" --arg library "$OSERA_LIBRARY" --arg registry_ref "$OSERA_REGISTRY_REF" \
            --arg pack_checksum "$PACK_CHECKSUM" \
+           --arg rehearsal "${OSERA_REHEARSAL:-false}" \
            ./*.json > result.json
 
         echo "result=$(jq -r .result result.json)" >> "$GITHUB_OUTPUT"

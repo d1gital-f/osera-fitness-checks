@@ -14,6 +14,10 @@ The library lives in the `finos-osera-forks` organisation next to the patch repo
 
 Every check action declares the version of the standard it was written against, twice in the same words: in its `description` (`FORK-001.REQ-001 (FORK-001 0.1.0): ...`) and in its `check_is` line (`check_is FORK-001 0.1.0 FORK-001.REQ-001 FORK-001.CHECK-001`). At run time the recorder reads the pack file at `STANDARDS_REF` (`docs/catalog/packs/<pack>.json`, which names every included standard with its version) and compares: equal, the record says `standard_version` and `check_version`; different, the requirement is recorded `not-tested` with both versions in `observed`, the roll up is not a pass, and the gate refuses. Before a release the lint job makes the same comparison for every action, so a library release cannot move `STANDARDS_REF` to a pack whose standards changed without the actions changing with it. The result also carries `pack_checksum`, the digest of that pack file. A new pack whose standards changed is a new major of this library; a pack patch that changes no check is a patch release that moves `STANDARDS_REF` and nothing else.
 
+## A rehearsal before the release tag
+
+A producer can run every check on a branch or commit before pushing the release tag: in the patch repository, Actions, "OSERA fitness checks", Run workflow, choose the branch, type the tag you intend to push. The workflow checks that commit as if the tag pointed at it (the tag is created locally in the runner, never pushed), prints the result and uploads it as an artifact, and signs nothing: the result says `rehearsal, not signed`, no attestation exists, so the gate can never accept it. A red rehearsal costs nothing. The real release is the tag push, unchanged.
+
 ## Workflows
 
 ### Fitness checks on a release tag

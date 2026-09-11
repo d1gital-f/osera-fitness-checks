@@ -7,6 +7,12 @@ name: OSERA fitness checks
 run-name: OSERA fitness checks on ${{ github.ref_name }}
 
 on:
+  workflow_dispatch: # a rehearsal: run the checks on a branch or commit as if the tag below pointed at it, nothing is signed
+    inputs:
+      tag:
+        description: 'the release tag you intend to push, for example v5.3.39.1-osera-00001'
+        required: true
+        type: string
   push:
     tags: # the two release tag forms of OSERA-SP-0.1.0: the Java CARE style form (REL-003-JAVA) and the generic form (the + must be escaped)
       - 'v*-osera-*'
@@ -21,4 +27,5 @@ jobs:
   fitness:
     uses: finos-osera-forks/fitness-checks/.github/workflows/fitness.yaml@v1
     with:
-      tag: ${{ github.ref_name }}
+      tag: ${{ inputs.tag || github.ref_name }} # the pushed tag, or the intended one in a rehearsal
+      rehearsal: ${{ github.event_name == 'workflow_dispatch' }}

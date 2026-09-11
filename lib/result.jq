@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Builds result.json from the per requirement records (jq -s: the input is the array of all records).
-# Arguments: $pack $pack_checksum $repo $release $commit $producer $library $registry_ref.
+# Arguments: $pack $pack_checksum $repo $release $commit $producer $library $registry_ref $rehearsal.
 
 # The one rollup, used per standard and at the top: any fail is a fail, then warn, then not-tested, then pass;
 # not-applicable only when everything underneath is.
@@ -33,7 +33,7 @@ def rollup:
     library: (if $library == "" then null else $library end),
     producer: (if $producer == "" then null else $producer end),
     result: ($standards | rollup),
-    signature: "see the GitHub artifact attestation on this file",
+    signature: (if $rehearsal == "true" then "rehearsal, not signed: the gate never accepts this result" else "see the GitHub artifact attestation on this file" end),
     standards: $standards,
     checks: $checks,
     proposals: $proposals
